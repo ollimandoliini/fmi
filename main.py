@@ -59,7 +59,7 @@ def send_daylight_message():
         '%H:%M:%S') + ' ja laskee klo ' + daytime_data['sunset'].time().strftime('%H:%M:%S') +
         '. Päivän pituus on ' + str(daytime_data['day_length']))
 
-    data = {'chat_id': '-248024980', 'text': msg}
+    data = {'chat_id': os.environ['CHAT_ID'], 'text': msg}
 
     r = requests.post(url=TELEGRAM_URL, data=data)
     print(r.content)
