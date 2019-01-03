@@ -5,10 +5,10 @@ import time
 import dateutil.parser
 import pytz
 import schedule
-
+import os
 
 def get_coordinates(cityname):
-    GEO_CODING_API_URL = f'https: // maps.googleapis.com/maps/api/geocode/json?address = {cityname} & key = {GEO_CODING_API_KEY}
+    GEO_CODING_API = f"https://maps.googleapis.com/maps/api/geocode/json?address={cityname}&key={os.environ['GEO_CODING_API_KEY']}"
     r = requests.get(GEO_CODING_API).content
     json_data = json.loads(r)
     lat = json_data['results'][0]['geometry']['bounds']['southwest']['lat']
@@ -27,7 +27,7 @@ def daytime_data(latitude, longitude):
 def get_timezone(cityname):
     city_coordinates = get_coordinates(cityname)
     CURRENT_TIME = int(time.mktime(datetime.datetime.now().timetuple()))
-    TIME_ZONE_API = f'https://maps.googleapis.com/maps/api/timezone/json?location={city_coordinates[0]},{city_coordinates[1]}&timestamp={CURRENT_TIME}&key={GEO_CODING_API_KEY}'
+    TIME_ZONE_API = f"https://maps.googleapis.com/maps/api/timezone/json?location={city_coordinates[0]},{city_coordinates[1]}&timestamp={CURRENT_TIME}&key={os.environ['GEO_CODING_API_KEY']}"
     r = requests.get(TIME_ZONE_API).content
     json_data = json.loads(r)
     return json_data
@@ -54,7 +54,7 @@ def daytime_data_by_city(cityname):
 
 def send_daylight_message():
     daytime_data = daytime_data_by_city('tampere')
-    TELEGRAM_URL = f"https://api.telegram.org/{BOT_KEY}/sendMessage"
+    TELEGRAM_URL = f"https://api.telegram.org/{os.environ['BOT_KEY']}/sendMessage"
     msg = str('Aurinko nousee tänään klo ' + daytime_data['sunrise'].time().strftime(
         '%H:%M:%S') + ' ja laskee klo ' + daytime_data['sunset'].time().strftime('%H:%M:%S') +
         '. Päivän pituus on ' + str(daytime_data['day_length']))
@@ -66,6 +66,7 @@ def send_daylight_message():
 
 
 schedule.every().day.at("7:00").do(send_daylight_message)
+schedule.every().minute.do(send_daylight_message)
 
 while True:
     schedule.run_pending()
