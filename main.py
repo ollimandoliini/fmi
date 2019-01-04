@@ -7,6 +7,8 @@ import pytz
 import schedule
 import os
 
+
+
 def get_coordinates(cityname):
     GEO_CODING_API = f"https://maps.googleapis.com/maps/api/geocode/json?address={cityname}&key={os.environ['GEO_CODING_API_KEY']}"
     r = requests.get(GEO_CODING_API).content
@@ -60,13 +62,13 @@ def send_daylight_message():
         '. Päivän pituus on ' + str(daytime_data['day_length']))
 
     data = {'chat_id': os.environ['CHAT_ID'], 'text': msg}
-
     r = requests.post(url=TELEGRAM_URL, data=data)
-    print(r.content)
+    return json.loads(r.content)
 
+if __name__ == "__main__":
+    send_daylight_message()
 
-schedule.every().day.at("7:00").do(send_daylight_message)
-
-while True:
-    schedule.run_pending()
-    time.sleep(60)
+    schedule.every().day.at("7:00").do(send_daylight_message)
+    while True:
+        schedule.run_pending()
+        time.sleep(60)
