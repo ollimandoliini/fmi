@@ -47,7 +47,7 @@ def daytime_data_by_city(cityname):
         seconds=city_daytime_data['results']['day_length'])
 
     sunrise_normalized = pytz.utc.normalize(sunrise).astimezone(tz)
-    sunset_normalized = pytz.utc.normalize(sunset)
+    sunset_normalized = pytz.utc.normalize(sunset).astimezone(tz)
 
     sunset_sunrise_daylenght = {'sunrise':
                                 sunrise_normalized,  'sunset': sunset_normalized, 'day_length': day_length}
