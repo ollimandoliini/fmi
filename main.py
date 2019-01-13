@@ -8,7 +8,6 @@ import schedule
 import os
 
 
-
 def get_coordinates(cityname):
     GEO_CODING_API = f"https://maps.googleapis.com/maps/api/geocode/json?address={cityname}&key={os.environ['GEO_CODING_API_KEY']}"
     r = requests.get(GEO_CODING_API).content
@@ -19,8 +18,8 @@ def get_coordinates(cityname):
     return coordinates
 
 
-def daytime_data(latitude, longitude):
-    SUNRISE_SUNSET_API = f'https://api.sunrise-sunset.org/json?lat={latitude}&lng={longitude}&formatted=0'
+def daytime_data(latitude, longitude, date='today'):
+    SUNRISE_SUNSET_API = f'https://api.sunrise-sunset.org/json?lat={latitude}&lng={longitude}&formatted=0&date={date}'
     r = requests.get(SUNRISE_SUNSET_API).content
     json_data = json.loads(r)
     return json_data
@@ -35,9 +34,10 @@ def get_timezone(cityname):
     return json_data
 
 
-def daytime_data_by_city(cityname):
+def daytime_data_by_city(cityname, date='today'):
     city_coordinates = get_coordinates(cityname)
-    city_daytime_data = daytime_data(city_coordinates[0], city_coordinates[1])
+    city_daytime_data = daytime_data(
+        city_coordinates[0], city_coordinates[1], date)
     timezone_data = get_timezone(cityname)
     tz = pytz.timezone(timezone_data['timeZoneId'])
 
@@ -54,19 +54,29 @@ def daytime_data_by_city(cityname):
     return sunset_sunrise_daylenght
 
 
+def day_lenght_difference(date1, date2, cityname):
+    date1_lenght = daytime_data_by_city(cityname, date1)['day_length']
+    date2_lenght = daytime_data_by_city(cityname, date2)['day_length']
+    difference = date1_lenght - date2_lenght
+    return difference
+
+
 def send_daylight_message():
+    today = datetime.date.today()
+    yesterday = datetime.date.today() - datetime.timedelta(1)
     daytime_data = daytime_data_by_city('tampere')
     TELEGRAM_URL = f"https://api.telegram.org/{os.environ['BOT_KEY']}/sendMessage"
     msg = str('Aurinko nousee tänään klo ' + daytime_data['sunrise'].time().strftime(
         '%H:%M:%S') + ' ja laskee klo ' + daytime_data['sunset'].time().strftime('%H:%M:%S') +
-        '. Päivän pituus on ' + str(daytime_data['day_length']))
+        '. Päivän pituus on ' + str(daytime_data['day_length']) + '. Pituuden muutos eilisestä' + day_lenght_difference(today, yesterday, 'tampere'))
 
     data = {'chat_id': os.environ['CHAT_ID'], 'text': msg}
     r = requests.post(url=TELEGRAM_URL, data=data)
     return json.loads(r.content)
 
-if __name__ == "__main__":
 
+if __name__ == "__main__":
+    send_daylight_message()
     schedule.every().day.at("7:00").do(send_daylight_message)
     while True:
         schedule.run_pending()
