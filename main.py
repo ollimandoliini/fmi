@@ -68,12 +68,14 @@ def send_daylight_message():
     TELEGRAM_URL = f"https://api.telegram.org/{os.environ['BOT_KEY']}/sendMessage"
     msg = str('Aurinko nousee tänään klo ' + daytime_data['sunrise'].time().strftime(
         '%H:%M:%S') + ' ja laskee klo ' + daytime_data['sunset'].time().strftime('%H:%M:%S') +
-        '. Päivän pituus on ' + str(daytime_data['day_length']) + '. Pituuden muutos eilisestä' + day_lenght_difference(today, yesterday, 'tampere'))
-
+        '. Päivän pituus on ' + str(daytime_data['day_length']) + '. Pituuden muutos eilisestä ' + str(
+            day_lenght_difference(today, yesterday, 'tampere')))
     data = {'chat_id': os.environ['CHAT_ID'], 'text': msg}
     r = requests.post(url=TELEGRAM_URL, data=data)
     return json.loads(r.content)
 
+
+send_daylight_message()
 
 if __name__ == "__main__":
     send_daylight_message()
