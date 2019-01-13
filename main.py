@@ -75,8 +75,6 @@ def send_daylight_message():
     return json.loads(r.content)
 
 
-send_daylight_message()
-
 if __name__ == "__main__":
     send_daylight_message()
     schedule.every().day.at("7:00").do(send_daylight_message)
