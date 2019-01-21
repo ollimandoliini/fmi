@@ -76,7 +76,7 @@ def send_daylight_message():
 
 
 if __name__ == "__main__":
-    schedule.every().day.at("7:00").do(send_daylight_message)
+    schedule.every().day.at("5:00").do(send_daylight_message)
     while True:
         schedule.run_pending()
         time.sleep(60)
