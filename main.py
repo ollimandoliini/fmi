@@ -57,7 +57,8 @@ def daytime_data_by_city(cityname, date='today'):
 def day_lenght_difference(date1, date2, cityname):
     date1_lenght = daytime_data_by_city(cityname, date1)['day_length']
     date2_lenght = daytime_data_by_city(cityname, date2)['day_length']
-    difference = date1_lenght - date2_lenght
+
+    difference = abs(date1_lenght - date2_lenght)
     return difference
 
 
@@ -75,8 +76,8 @@ def send_daylight_message():
     return json.loads(r.content)
 
 
-if __name__ == "__main__":
-    schedule.every().day.at("5:00").do(send_daylight_message)
-    while True:
-        schedule.run_pending()
-        time.sleep(60)
+# if __name__ == "__main__":
+#     schedule.every().day.at("5:00").do(send_daylight_message)
+#     while True:
+#         schedule.run_pending()
+#         time.sleep(60)
