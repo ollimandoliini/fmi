@@ -62,19 +62,30 @@ def day_lenght_difference(date1, date2, cityname):
     return difference
 
 
+def change_delta(difference1, difference2):
+    return abs(difference1 - difference2)
+
+
 def send_daylight_message():
     today = datetime.date.today()
     yesterday = datetime.date.today() - datetime.timedelta(1)
+    the_day_before = datetime.date.today() - datetime.timedelta(2)
     daytime_data = daytime_data_by_city('tampere')
+
+    difference_yesterday = day_lenght_difference(
+        the_day_before, yesterday, 'tampere')
+    difference_today = day_lenght_difference(today, yesterday, 'tampere')
+
+    change_of_change = change_delta(difference_yesterday, difference_today)
+
     TELEGRAM_URL = f"https://api.telegram.org/{os.environ['BOT_KEY']}/sendMessage"
-    msg = str('Aurinko nousee tänään klo ' + daytime_data['sunrise'].time().strftime(
-        '%H:%M:%S') + ' ja laskee klo ' + daytime_data['sunset'].time().strftime('%H:%M:%S') +
-        '. Päivän pituus on ' + str(daytime_data['day_length']) + '. Pituuden muutos eilisestä ' + str(
-            day_lenght_difference(today, yesterday, 'tampere')))
+    msg = f"Aurinko nousee tänään klo {daytime_data['sunrise'].time().strftime('%H:%M:%S')} ja laskee klo {daytime_data['sunset'].time().strftime('%H:%M:%S')} Päivän pituus on {daytime_data['day_length']}. Pituuden muutos eilisestä {difference_today} ja muutoksen muutos {change_of_change}"
     data = {'chat_id': os.environ['CHAT_ID'], 'text': msg}
     r = requests.post(url=TELEGRAM_URL, data=data)
     return json.loads(r.content)
 
+
+send_daylight_message()
 
 # if __name__ == "__main__":
 #     schedule.every().day.at("5:00").do(send_daylight_message)
