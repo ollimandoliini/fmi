@@ -79,14 +79,11 @@ def send_daylight_message():
     change_of_change = change_delta(difference_yesterday, difference_today)
 
     TELEGRAM_URL = f"https://api.telegram.org/{os.environ['BOT_KEY']}/sendMessage"
-    msg = f"Aurinko nousee tänään klo {daytime_data['sunrise'].time().strftime('%H:%M:%S')} ja laskee klo {daytime_data['sunset'].time().strftime('%H:%M:%S')} Päivän pituus on {daytime_data['day_length']}. Pituuden muutos eilisestä {difference_today} ja muutoksen muutos {change_of_change}"
+    msg = f"☀️ AURINKOA ☀️\nNousu: {daytime_data['sunrise'].time().strftime('%H:%M:%S')}\nLasku: {daytime_data['sunset'].time().strftime('%H:%M:%S')}\nPituus: {daytime_data['day_length']}\nMuutos: {difference_today}\nMuutoksen muutos{change_of_change}"
     data = {'chat_id': os.environ['CHAT_ID'], 'text': msg}
     r = requests.post(url=TELEGRAM_URL, data=data)
     return json.loads(r.content)
 
 
 if __name__ == "__main__":
-    schedule.every().day.at("5:00").do(send_daylight_message)
-    while True:
-        schedule.run_pending()
-        time.sleep(60)
+    send_daylight_message()
