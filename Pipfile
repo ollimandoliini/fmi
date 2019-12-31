@@ -8,6 +8,8 @@ schedule = "*"
 requests = "*"
 pytz = "*"
 python-dateutil = "*"
+timezonefinder = "*"
+ipykernel = "*"
 
 [dev-packages]
 pylint = "*"

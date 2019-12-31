@@ -1,86 +1,78 @@
 import requests
-import json
-import datetime
-import time
-import dateutil.parser
+from timezonefinder import TimezoneFinder
 import pytz
-import schedule
+import datetime
 import os
+import sys
+
+# Tampere
+coords = (61.497753, 23.760954)
 
 
-def get_coordinates(cityname):
-    GEO_CODING_API = f"https://maps.googleapis.com/maps/api/geocode/json?address={cityname}&key={os.environ['GEO_CODING_API_KEY']}"
-    r = requests.get(GEO_CODING_API).content
-    json_data = json.loads(r)
-    lat = json_data['results'][0]['geometry']['bounds']['southwest']['lat']
-    lng = json_data['results'][0]['geometry']['bounds']['southwest']['lng']
-    coordinates = (lat, lng)
-    return coordinates
+def get_timezone(coords):
+    tf = TimezoneFinder()
+    latitude, longitude = coords
+    timezone_name = tf.timezone_at(lng=longitude, lat=latitude)
+    timezone_object = pytz.timezone(timezone_name)
+    return timezone_object
 
 
-def daytime_data(latitude, longitude, date='today'):
-    SUNRISE_SUNSET_API = f'https://api.sunrise-sunset.org/json?lat={latitude}&lng={longitude}&formatted=0&date={date}'
-    r = requests.get(SUNRISE_SUNSET_API).content
-    json_data = json.loads(r)
-    return json_data
+def get_daytime_data(coords, date='today'):
+    SUNRISE_SUNSET_API = f'https://api.sunrise-sunset.org/json?lat={coords[0]}&lng={coords[1]}&formatted=0&date={date}'
+    return requests.get(SUNRISE_SUNSET_API).json()
 
 
-def get_timezone(cityname):
-    city_coordinates = get_coordinates(cityname)
-    CURRENT_TIME = int(time.mktime(datetime.datetime.now().timetuple()))
-    TIME_ZONE_API = f"https://maps.googleapis.com/maps/api/timezone/json?location={city_coordinates[0]},{city_coordinates[1]}&timestamp={CURRENT_TIME}&key={os.environ['GEO_CODING_API_KEY']}"
-    r = requests.get(TIME_ZONE_API).content
-    json_data = json.loads(r)
-    return json_data
+def parse_to_local_time(iso8601, tz):
+    dt = datetime.datetime.fromisoformat(iso8601)
+    return pytz.utc.normalize(dt).astimezone(tz)
 
 
-def daytime_data_by_city(cityname, date='today'):
-    city_coordinates = get_coordinates(cityname)
-    city_daytime_data = daytime_data(
-        city_coordinates[0], city_coordinates[1], date)
-    timezone_data = get_timezone(cityname)
-    tz = pytz.timezone(timezone_data['timeZoneId'])
+timezone = get_timezone(coords)
+today_daytime_data = get_daytime_data(coords)
+sunrise_today = parse_to_local_time(
+    today_daytime_data['results']['sunrise'], timezone)
+sunset_today = parse_to_local_time(
+    today_daytime_data['results']['sunset'], timezone)
 
-    sunrise = dateutil.parser.parse(city_daytime_data['results']['sunrise'])
-    sunset = dateutil.parser.parse(city_daytime_data['results']['sunset'])
-    day_length = datetime.timedelta(
-        seconds=city_daytime_data['results']['day_length'])
+sunrise_today.strftime('%H:%M:%S')
+sunset_today.strftime('%H:%M:%S')
 
-    sunrise_normalized = pytz.utc.normalize(sunrise).astimezone(tz)
-    sunset_normalized = pytz.utc.normalize(sunset).astimezone(tz)
+day_length_today = datetime.timedelta(
+    seconds=today_daytime_data['results']['day_length'])
 
-    sunset_sunrise_daylenght = {'sunrise':
-                                sunrise_normalized,  'sunset': sunset_normalized, 'day_length': day_length}
-    return sunset_sunrise_daylenght
+yesterday_daytime_data = get_daytime_data(
+    coords, date=datetime.datetime.today() - datetime.timedelta(1))
+day_length_yesterday = datetime.timedelta(
+    seconds=yesterday_daytime_data['results']['day_length'])
 
-
-def day_lenght_difference(date1, date2, cityname):
-    date1_lenght = daytime_data_by_city(cityname, date1)['day_length']
-    date2_lenght = daytime_data_by_city(cityname, date2)['day_length']
-
-    difference = abs(date1_lenght - date2_lenght)
-    return difference
+day_before_yesterday_daytime_data = get_daytime_data(
+    coords, date=datetime.datetime.today() - datetime.timedelta(2))
+day_length_before_yesterday = datetime.timedelta(
+    seconds=day_before_yesterday_daytime_data['results']['day_length'])
 
 
-def change_delta(difference1, difference2):
-    return abs(difference1 - difference2)
+change = day_length_today - day_length_yesterday
+
+change_delta = abs((day_length_today - day_length_yesterday) -
+                   (day_length_yesterday - day_length_before_yesterday))
 
 
-def send_daylight_message():
-    today = datetime.date.today()
-    yesterday = datetime.date.today() - datetime.timedelta(1)
-    the_day_before = datetime.date.today() - datetime.timedelta(2)
-    daytime_data = daytime_data_by_city('tampere')
+TELEGRAM_URL = f"https://api.telegram.org/{os.environ['BOT_KEY']}/sendMessage"
 
-    difference_yesterday = day_lenght_difference(
-        the_day_before, yesterday, 'tampere')
-    difference_today = day_lenght_difference(today, yesterday, 'tampere')
+msg = f"""
+```AURINKOA ☀️
+Nousu:  {sunrise_today.strftime('%H:%M:%S')}
+Lasku:  {sunset_today.strftime('%H:%M:%S')}
+Pituus: {day_length_today}
+Muutos:  {change}
+Muutoksen muutos: {change_delta}```"""
+data = {'chat_id': os.environ['CHAT_ID'],
+        'text': msg, 'parse_mode': 'Markdown'}
 
-    change_of_change = change_delta(difference_yesterday, difference_today)
-
-    TELEGRAM_URL = f"https://api.telegram.org/{os.environ['BOT_KEY']}/sendMessage"
-    msg = f"```AURINKOA ☀️\nNousu:  {daytime_data['sunrise'].time().strftime('%H:%M:%S')}\nLasku:  {daytime_data['sunset'].time().strftime('%H:%M:%S')}\nPituus: {daytime_data['day_length']}\nMuutos:  {difference_today}\nMuutoksen muutos: {change_of_change}```"
-    data = {'chat_id': os.environ['CHAT_ID'],
-            'text': msg, 'parse_mode': 'Markdown'}
+try:
     r = requests.post(url=TELEGRAM_URL, data=data)
-    return json.loads(r.content)
+    r.raise_for_status()
+except requests.exceptions.HTTPError as err:
+    r = requests.post(url=TELEGRAM_URL, data={'chat_id': os.environ['CHAT_ID'],
+                                              'text': str(err), 'parse_mode': 'Markdown'})
+    sys.exit(1)
