@@ -10,6 +10,7 @@ pytz = "*"
 python-dateutil = "*"
 timezonefinder = "*"
 ipykernel = "*"
+pillow = "*"
 
 [dev-packages]
 pylint = "*"
