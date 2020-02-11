@@ -67,7 +67,7 @@ def day_length_info_string(coords):
 
 img = Image.new('RGB', (750, 350), color='white')
 draw = ImageDraw.Draw(img)
-font_heading = ImageFont.truetype("Helvetica.ttc", 48)
+font_heading = ImageFont.truetype("Helvetica.ttf", 48)
 font_body = ImageFont.truetype("jetbrains-mono.ttf", 32)
 
 draw.text((75, 10), "Tampere", (0, 0, 0), font=font_heading)
