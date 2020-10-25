@@ -3,13 +3,9 @@ from timezonefinder import TimezoneFinder
 import pytz
 import datetime
 import os
-import requests
-from PIL import Image, ImageFont, ImageDraw
-from IPython.display import display
-from io import BytesIO
+import settings
 
-TAMPERE = 61.497753, 23.760954
-STOCKHOLM = 59.334591, 18.063240
+cities = {"Tampere": (61.497753, 23.760954), "Helsinki": (60.16952, 24.93545)}
 
 
 def get_timezone(coords):
@@ -20,9 +16,9 @@ def get_timezone(coords):
     return timezone_object
 
 
-def get_daytime_data(coords, date='today'):
+def get_daytime_data(coords, date="today"):
     lat, long = coords
-    sunrise_sunset_api_url = f'https://api.sunrise-sunset.org/json?lat={lat}&lng={long}&formatted=0&date={date}'
+    sunrise_sunset_api_url = f"https://api.sunrise-sunset.org/json?lat={lat}&lng={long}&formatted=0&date={date}"
     return requests.get(sunrise_sunset_api_url).json()
 
 
@@ -35,64 +31,58 @@ def day_length_info_string(coords):
     timezone = get_timezone(coords)
     today_daytime_data = get_daytime_data(coords)
     sunrise_today = parse_to_local_time(
-        today_daytime_data['results']['sunrise'], timezone)
+        today_daytime_data["results"]["sunrise"], timezone
+    )
     sunset_today = parse_to_local_time(
-        today_daytime_data['results']['sunset'], timezone)
+        today_daytime_data["results"]["sunset"], timezone
+    )
 
     day_length_today = datetime.timedelta(
-        seconds=today_daytime_data['results']['day_length'])
+        seconds=today_daytime_data["results"]["day_length"]
+    )
 
     yesterday_daytime_data = get_daytime_data(
-        coords, date=datetime.datetime.today() - datetime.timedelta(1))
+        coords, date=datetime.datetime.today() - datetime.timedelta(1)
+    )
     day_length_yesterday = datetime.timedelta(
-        seconds=yesterday_daytime_data['results']['day_length'])
+        seconds=yesterday_daytime_data["results"]["day_length"]
+    )
 
     day_before_yesterday_daytime_data = get_daytime_data(
-        coords, date=datetime.datetime.today() - datetime.timedelta(2))
+        coords, date=datetime.datetime.today() - datetime.timedelta(2)
+    )
     day_length_before_yesterday = datetime.timedelta(
-        seconds=day_before_yesterday_daytime_data['results']['day_length'])
+        seconds=day_before_yesterday_daytime_data["results"]["day_length"]
+    )
 
-    sunrise_today_str = sunrise_today.strftime('%H:%M:%S')
-    sunset_today_str = sunset_today.strftime('%H:%M:%S')
-    change_str = str(day_length_today - day_length_yesterday)
-    delta = abs((day_length_today - day_length_yesterday) -
-                (day_length_yesterday - day_length_before_yesterday))
+    sunrise_today_str = sunrise_today.strftime("%H:%M:%S")
+    sunset_today_str = sunset_today.strftime("%H:%M:%S")
+    change_str = abs(day_length_today - day_length_yesterday)
+    delta = abs(
+        (day_length_today - day_length_yesterday)
+        - (day_length_yesterday - day_length_before_yesterday)
+    )
 
-    return (f"Nousu: {sunrise_today_str:>10}\n"
-            f"Lasku: {sunset_today_str:>10}\n"
-            f"Pituus: {str(day_length_today):>9}\n"
-            f"Muutos: {change_str:>9}\n"
-            f"Delta: {str(delta):>10}")
-
-
-img = Image.new('RGB', (750, 350), color='white')
-draw = ImageDraw.Draw(img)
-font_heading = ImageFont.truetype("Helvetica.ttf", 48)
-font_body = ImageFont.truetype("jetbrains-mono.ttf", 32)
-
-draw.text((75, 10), "Tampere", (0, 0, 0), font=font_heading)
-draw.text((475, 10), "Stockholm", (0, 0, 0), font=font_heading)
-
-draw.text((0, 80), day_length_info_string(TAMPERE), (0, 0, 0), font=font_body)
-draw.text((400, 80), day_length_info_string(
-    STOCKHOLM), (0, 0, 0), font=font_body)
-
-flag_finland = Image.open(
-    'flag-finland.png', 'r').resize((64, 64), Image.ANTIALIAS)
-img.paste(flag_finland, (0, 0), flag_finland)
-
-flag_sweden = Image.open(
-    'flag-sweden.png', 'r').resize((64, 64), Image.ANTIALIAS)
-img.paste(flag_sweden, (400, 0), flag_sweden)
-
-fd = BytesIO()
-img.save(fd, "png", quality=95)
+    return (
+        f"Nousu: {sunrise_today_str:>10}\n"
+        f"Lasku: {sunset_today_str:>10}\n"
+        f"Pituus: {str(day_length_today):>9}\n"
+        f"Muutos: {str(change_str):>9}\n"
+        f"Delta: {str(delta):>10}"
+    )
 
 
-fd.seek(0)
-files = {'photo': fd.read()}
-data = {'chat_id': os.environ['CHAT_ID'], 'disable_notification': True}
+city_messages = [
+    f"```\n🌞 {city}\n{day_length_info_string(coords)}```" for city, coords in cities.items()
+]
 
-url = f"https://api.telegram.org/{os.environ['BOT_KEY']}/sendPhoto"
 
-requests.post(url, data=data, files=files).content
+for msg in city_messages:
+    data = {
+        "chat_id": os.environ["CHAT_ID"],
+        "disable_notification": True,
+        "text": msg,
+        "parse_mode": "MarkdownV2",
+    }
+    url = f"https://api.telegram.org/{os.environ['BOT_KEY']}/sendMessage"
+    requests.post(url, data=data)

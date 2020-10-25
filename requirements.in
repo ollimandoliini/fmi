@@ -1,0 +1,6 @@
+schedule
+requests
+pytz
+timezonefinder
+ipykernel
+python-dotenv

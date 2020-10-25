@@ -1,2 +1,4 @@
-settings.py
+.venv
 .env
+.vscode
+.ipynb_checkpoints
